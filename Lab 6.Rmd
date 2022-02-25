@@ -44,11 +44,13 @@ coef(model_select, id = 3) # Backward selection BIC
 # Exercise 3
 ```{r}
 model_select_aic <- step(full_model, direction = "backward")
-aic_model <- lm(SAT ~ Years + Public + Expend + Rank, data = sat_scores)
-tidy(aic_model, conf.int = TRUE) %>% 
+tidy(model_select_aic, conf.int = TRUE) %>% 
   kable(format = "markdown", digits = 3)
 ```
 # Exercise 4
 
 The three backward selection models don't all have the same number of predictors. The adjusted R^2 model and the AIC model has 4 predictors, but the BIC model has 3 predictors. It is expected that the BIC model will have the fewest predictors because the penalty for BIC is larger than AIC if n is greater than or equal to 8.  
+
+
+
 
