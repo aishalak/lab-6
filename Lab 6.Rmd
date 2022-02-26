@@ -2,7 +2,9 @@
 title: "Lab 6"
 author: "Aisha Lakshman"
 date: "2/24/2022"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -26,12 +28,14 @@ tidy(full_model)
 ```
 # Exercise 1
 ```{r}
+model_select <- regsubsets(SAT ~ Takers + Income + Years + Public + Expend + 
+                             Rank , data = sat_scores, method = "backward")
+
+select_summary <- summary(model_select)
+
 select_summary$adjr2 #Extract adjusted rsq for models
 coef(model_select, 1:6) #Display all possible models
 
-model_select <- regsubsets(SAT ~ Takers + Income + Years + Public + Expend + 
-                             Rank , data = sat_scores, method = "backward")
-select_summary <- summary(model_select)
 coef(model_select, id = 4) # Backward selection adjusted rsq
 ```
 # Exercise 2
@@ -51,6 +55,73 @@ tidy(model_select_aic, conf.int = TRUE) %>%
 
 The three backward selection models don't all have the same number of predictors. The adjusted R^2 model and the AIC model has 4 predictors, but the BIC model has 3 predictors. It is expected that the BIC model will have the fewest predictors because the penalty for BIC is larger than AIC if n is greater than or equal to 8.  
 
+## Part II: Model Diagnostics
 
+# Exercise 5
+```{r}
+sat_aug <- augment(model_select_aic) %>%
+  mutate(obs_num = row_number())
+
+head(sat_aug, 5)
+```
+# Exercise 6
+```{r}
+leverage_threshold <- 2*(4+1)/nrow(sat_aug)
+leverage_threshold
+```
+# Exercise 7
+```{r}
+ggplot(data = sat_aug, aes(x = obs_num, y = .hat)) +
+  geom_point() + geom_line(aes(y = 0.2, color = "red")) +
+  labs(x = "Observation Number", y = "Leverage", title = "Leverage vs. Observation Number ")
+
+```
+# Exercise 8
+```{r}
+which(sat_aug$.hat>0.2)
+
+Sleuth3::case1201[c(22,29),] #Extract high leverage observations 
+```
+# Exercise 9
+```{r}
+plot(sat_aug$.fitted, sat_aug$.std.resid, ylim=c(-3,3), xlab = "Predicted", ylab = "Standardized Residuals", main = "Standardized Resdiuals vs. Predicted")
+abline(h = -2, col = "red")
+abline(h = 2, col = "red") 
+```
+# Exercise 10
+Based on the code below, no states are considered to have standardized residuals with large magnitude. 
+```{r}
+which(sat_aug$.std.resid < -2)
+which(sat_aug$.std.resid > 2)
+```
+# Exercise 11
+To deal with the influential point, Alaska (case 29), we should first compare the model with and without Alaska. Red flags are raised if there is a drastic difference in coefficients and/or if there is a change of sign between the two models. If red flags are raised after comparing the two models, the next step would be to examine if Alaska is a part of the research question or not. Specifically, we have to ask if the characteristics of the Alaska observation are consistent with the definition of the population we are studying. If Alaska is a part of the population we are studying, the observation should be included.  
+```{r}
+ggplot(data = sat_aug, aes(x = obs_num, y = .cooksd)) +
+  geom_point(alpha = 0.7) +
+  geom_hline(yintercept=1, color = "red") +
+  geom_text(aes(label = ifelse(.cooksd > 1,as.character(obs_num),"")))
+
+Sleuth3::case1201[c(29),] #Extract influential point
+```
+# Exercise 12
+Based on the code and outputs below, it seems like Expand is correlated with all the predictor variables, noteably with Years and Public. 
+```{r}
+reg_expend <- lm(Expend ~ Years + Public + Rank , data = sat_scores)
+
+expend_summary = summary(reg_expend)
+
+expend_summary$r.squared
+
+VIF <- 1/(1 - 0.2102009)
+VIF 
+
+vif(reg_expend)
+```
+# Excerise 12 (continued)
+The code and outputs below indicate that there are no obvious concerns with multicollinearity in this model because The VIC values are similar.
+```{r}
+vif(model_select_aic)
+```
 
 
